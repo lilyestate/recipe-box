@@ -493,7 +493,7 @@ export default function RecipeManager() {
               }}>{selected.category}</span>
               <span style={{ fontSize: 12, color: "#998877" }}>{getSourceIcon(selected.source)} {selected.source}</span>
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, lineHeight: 1.4 }}>{selected.title}</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, lineHeight: 1.4, color: "#1a1208" }}>{selected.title}</h1>
 
             <a href={selected.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#c8a96e", wordBreak: "break-all" }}>
               {selected.url}
