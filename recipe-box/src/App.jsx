@@ -102,12 +102,14 @@ export default function RecipeManager() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterTag, setFilterTag] = useState("");
-  const [addStep, setAddStep] = useState("url"); // url | form | loading | done
+  const [addStep, setAddStep] = useState("import"); // url | form | loading | done
   const [urlInput, setUrlInput] = useState("");
   const [draft, setDraft] = useState(null);
   const [addCookedDate, setAddCookedDate] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [error, setError] = useState("");
+  const [importJson, setImportJson] = useState("");
+  const [importError, setImportError] = useState("");
   const inputRef = useRef();
 
   // Load from localStorage on mount
@@ -192,10 +194,38 @@ export default function RecipeManager() {
     }
   }
 
+  function handleImport() {
+    setImportError("");
+    try {
+      const raw = importJson.trim().replace(/```json|```/g, "").trim();
+      const data = JSON.parse(raw);
+      const recipes_to_add = Array.isArray(data) ? data : [data];
+      const normalized = recipes_to_add.map((r) => ({
+        id: Date.now() + Math.random(),
+        url: r.url || "",
+        source: r.source || detectSource(r.url || ""),
+        title: r.title || "無題のレシピ",
+        category: CATEGORIES.includes(r.category) ? r.category : "その他",
+        tags: r.tags || [],
+        ingredients: r.ingredients || [],
+        steps: r.steps || [],
+        memo: r.memo || "",
+        thumbnail: null,
+        cookedDates: [],
+        addedAt: new Date().toISOString().split("T")[0],
+      }));
+      setRecipes((prev) => [...normalized, ...prev]);
+      setImportJson("");
+      setView("list");
+    } catch (e) {
+      setImportError("JSONの形式が正しくありません。Claudeから出力されたテキストをそのまま貼り付けてください。");
+    }
+  }
+
   function handleSaveDraft() {
     setRecipes((prev) => [draft, ...prev]);
     setView("list");
-    setAddStep("url");
+    setAddStep("import");
     setUrlInput("");
     setDraft(null);
     setError("");
@@ -537,26 +567,48 @@ export default function RecipeManager() {
         {/* ADD VIEW */}
         {view === "add" && (
           <div className="fade-in">
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>レシピを追加</div>
-              <div style={{ fontSize: 12, color: "#998877" }}>YouTube・X・Instagram・TikTokのURLを貼り付けてください</div>
             </div>
 
-            {addStep === "url" && (
+            {/* TAB */}
+            <div style={{ display: "flex", borderBottom: "1px solid #e8e0d0", marginBottom: 20 }}>
+              {["import", "manual"].map((t) => (
+                <button key={t} onClick={() => setAddStep(t)} style={{
+                  flex: 1, padding: "10px", border: "none", background: "none",
+                  fontFamily: "inherit", fontSize: 13, cursor: "pointer",
+                  borderBottom: addStep === t ? "2px solid #1a1208" : "2px solid transparent",
+                  color: addStep === t ? "#1a1208" : "#998877",
+                  fontWeight: addStep === t ? 600 : 400,
+                }}>
+                  {t === "import" ? "📋 Claudeからインポート" : "✏️ 手動入力"}
+                </button>
+              ))}
+            </div>
+
+            {addStep === "import" && (
               <div>
-                <input
-                  ref={inputRef}
+                <div style={{ background: "#fff8e8", border: "1px solid #e9c46a55", borderRadius: 4, padding: "12px 16px", marginBottom: 16, fontSize: 12, color: "#665544", lineHeight: 1.7 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>使い方</div>
+                  <div>① このチャット（Claude）にレシピのURLを貼る</div>
+                  <div>② ClaudeがJSONを生成する</div>
+                  <div>③ そのテキストをここに貼り付けて「インポート」</div>
+                </div>
+                {importError && (
+                  <div style={{ background: "#fff0ee", border: "1px solid #f4c1b8", borderRadius: 4, padding: "10px 14px", fontSize: 12, color: "#c84b31", marginBottom: 12 }}>
+                    {importError}
+                  </div>
+                )}
+                <textarea
                   className="input-field"
-                  placeholder="https://..."
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleExtract()}
-                  style={{ marginBottom: 12 }}
+                  rows={8}
+                  placeholder={"ClaudeのJSONをここに貼り付け…"}
+                  value={importJson}
+                  onChange={(e) => setImportJson(e.target.value)}
+                  style={{ marginBottom: 12, resize: "vertical", fontFamily: "monospace", fontSize: 12 }}
                 />
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleExtract}>
-                    AIで情報を抽出する
-                  </button>
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleImport}>インポート</button>
                   <button className="btn btn-outline" onClick={() => setView("list")}>キャンセル</button>
                 </div>
               </div>
@@ -565,7 +617,7 @@ export default function RecipeManager() {
             {addStep === "loading" && (
               <div style={{ textAlign: "center", padding: "60px 0" }}>
                 <div className="spinner" style={{ marginBottom: 16 }} />
-                <div style={{ fontSize: 13, color: "#998877" }}>AIがレシピ情報を分析中…</div>
+                <div style={{ fontSize: 13, color: "#998877" }}>処理中…</div>
               </div>
             )}
 
