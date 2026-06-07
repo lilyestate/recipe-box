@@ -110,6 +110,8 @@ export default function RecipeManager() {
   const [error, setError] = useState("");
   const [importJson, setImportJson] = useState("");
   const [importError, setImportError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(null);
   const inputRef = useRef();
 
   // Load from localStorage on mount
@@ -192,6 +194,23 @@ export default function RecipeManager() {
       });
       setAddStep("form");
     }
+  }
+
+  function handleDeleteRecipe(id) {
+    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    setShowDeleteConfirm(false);
+    setView("list");
+  }
+
+  function handleTouchStart(e) {
+    setTouchStartX(e.touches[0].clientX);
+  }
+
+  function handleTouchEnd(e, backFn) {
+    if (touchStartX === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if (diff > 60) backFn();
+    setTouchStartX(null);
   }
 
   function handleImport() {
@@ -479,10 +498,32 @@ export default function RecipeManager() {
 
         {/* DETAIL VIEW */}
         {view === "detail" && selected && (
-          <div className="fade-in">
-            <button className="btn btn-outline" style={{ marginBottom: 20 }} onClick={() => setView("list")}>
-              ← 一覧に戻る
-            </button>
+          <div className="fade-in"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={(e) => handleTouchEnd(e, () => setView("list"))}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <button className="btn btn-outline" onClick={() => setView("list")}>
+                ← 一覧に戻る
+              </button>
+              <button
+                className="btn"
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ background: "none", border: "1px solid #f4c1b8", color: "#c84b31", fontSize: 12 }}
+              >
+                削除
+              </button>
+            </div>
+
+            {showDeleteConfirm && (
+              <div style={{ background: "#fff0ee", border: "1px solid #f4c1b8", borderRadius: 4, padding: "14px 16px", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, marginBottom: 12, color: "#c84b31" }}>このレシピを削除しますか？</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn" style={{ flex: 1, background: "#c84b31", color: "#fff", border: "none" }} onClick={() => handleDeleteRecipe(selected.id)}>削除する</button>
+                  <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowDeleteConfirm(false)}>キャンセル</button>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
               <span style={{
@@ -566,7 +607,10 @@ export default function RecipeManager() {
 
         {/* ADD VIEW */}
         {view === "add" && (
-          <div className="fade-in">
+          <div className="fade-in"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={(e) => handleTouchEnd(e, () => setView("list"))}
+          >
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>レシピを追加</div>
             </div>
